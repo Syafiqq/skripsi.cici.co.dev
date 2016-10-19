@@ -180,6 +180,16 @@ echo '</table>';
 <?php echo '<div class="custom_accordion_panel">' ?>
 <?php
 //<editor-fold desc="Normalisasi Data">
+echo '<table align="center" style="width:50%; border-collapse: collapse">';
+echo '<tr>';
+echo '<td>';
+foreach ($data['data']['metadata']['stepbystep']['norm'] as $step)
+{
+    echo "<p>{$step}</p>";
+}
+echo '</td>';
+echo '</tr>';
+echo '</table>';
 echo '<table style="width:100%; border : 1px solid black; border-collapse: collapse">';
 echo '<tr>';
 echo '<th style="padding: 5px; text-align: left; border : 1px solid black;">No</th>';
@@ -249,6 +259,16 @@ echo '</table>';
 <?php echo '<div class="custom_accordion_panel">' ?>
 <?php
 // <editor-fold defaultstate="collapsed" desc="Hitung Jarak">
+echo '<table align="center" style="width:50%; border-collapse: collapse">';
+echo '<tr>';
+echo '<td>';
+foreach ($data['data']['metadata']['stepbystep']['euclid'] as $step)
+{
+    echo "<p>{$step}</p>";
+}
+echo '</td>';
+echo '</tr>';
+echo '</table>';
 echo '<table style="width:30%; border : 1px solid black; border-collapse: collapse; margin: auto;">';
 echo '<tr>';
 echo '<th style="padding: 5px; text-align: left; border : 1px solid black;">No</th>';

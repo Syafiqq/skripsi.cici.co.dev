@@ -36,7 +36,9 @@ class M_iknn_debug extends CI_Model
         unset($inputData);
         $this->findMinMax();
         $this->calculateNormalization();
+        $this->calculateNormalizationStepByStep();
         $this->calculateEuclidianDistance();
+        $this->calculateEuclidianDistanceStepByStep();
         $this->sortDistanceAscending();
         $this->calculateMeanNormalizationData();
         $this->calculateCoefficientCorrelation();
@@ -133,7 +135,7 @@ class M_iknn_debug extends CI_Model
     {
         foreach ($this->category['key'] as $category)
         {
-            $this->data['metadata']['minmax'][$category] = array('min' => PHP_INT_MAX, 'max' => PHP_INT_MIN);
+            $this->data['metadata']['minmax'][$category] = array('min' => 9223372036854775807, 'max' => -9223372036854775808);
         }
         foreach ($this->dataModel as $dataModel)
         {
@@ -150,7 +152,7 @@ class M_iknn_debug extends CI_Model
 
     private function calculateNormalization()
     {
-        log_message('ERROR', var_export($this->data['metadata']['minmax'], true));
+        //log_message('ERROR', var_export($this->data['metadata']['minmax'], true));
         $this->normalization = array();
         foreach ($this->dataModel as $dataModel)
         {
@@ -168,10 +170,24 @@ class M_iknn_debug extends CI_Model
         unset($container);
     }
 
+    private function calculateNormalizationStepByStep()
+    {
+        $this->data['metadata']['stepbystep']['norm'][0] = '\(V_{ij}\'=\frac{V_{ij}-min_j}{max_j\;-\;min_j}\)';
+        $norm_i = mt_rand(0, (count($this->data['dataset']['training'])) - 2);
+        $norm_j = mt_rand(0, (count($this->category['key'])) - 2);
+        $this->data['metadata']['stepbystep']['norm'][1] = '\(V_{(' . ($norm_i + 1) . ',\;' . ($norm_j + 1) . ')}\'=\frac{V_{(' . ($norm_i + 1) . ',\;' . ($norm_j + 1) . ')}-min_{' . ($norm_i + 1) . '}}{max_{' . ($norm_i + 1) . '}\;-\;min_{' . ($norm_i + 1) . '}}\)';
+        $this->data['metadata']['stepbystep']['norm'][2] = '\(V_{(' . ($norm_i + 1) . ',' . ($norm_j + 1) . ')}\'=\frac{' . $this->data['dataset']['training'][$norm_i][$this->category['key'][$norm_j]] . '-' . $this->data['metadata']['minmax'][$this->category['key'][$norm_j]]['min'] . '}{' . $this->data['metadata']['minmax'][$this->category['key'][$norm_j]]['max'] . '\;-\;' . $this->data['metadata']['minmax'][$this->category['key'][$norm_j]]['min'] . '}\)';
+        $this->data['metadata']['stepbystep']['norm'][3] = '\(V_{(' . ($norm_i + 1) . ',' . ($norm_j + 1) . ')}\'=' . sprintf("%.4f", $this->normalization['dataset']['training'][$norm_i][$this->category['key'][$norm_j]]) . '\)';
+
+
+        log_message('ERROR', var_export(array($norm_i, $norm_j), TRUE));;
+        unset($norm_i, $norm_j);
+    }
+
     private function calculateEuclidianDistance()
     {
         $this->euclidian = array();
-        $this->euclidian['dataset']['training']  = array();
+        $this->euclidian['dataset']['training'] = array();
         $dataTesting = $this->normalization['dataset']['testing'][0];
         foreach ($this->normalization['dataset']['training'] as $index => $dataTraining)
         {
@@ -180,7 +196,7 @@ class M_iknn_debug extends CI_Model
             $container['no'] = $dataTraining['no'];
             foreach ($this->category['key'] as $category)
             {
-                if($category != 'tingkat_resiko')
+                if ($category != 'tingkat_resiko')
                 {
                     $distance += pow(($dataTesting[$category] - $dataTraining[$category]), 2.0);
                 }
@@ -192,10 +208,44 @@ class M_iknn_debug extends CI_Model
         unset($dataTesting, $container, $distance);
     }
 
+    private function calculateEuclidianDistanceStepByStep()
+    {
+        $norm_i = mt_rand(0, (count($this->data['dataset']['training'])) - 2);
+        $training = $this->normalization['dataset']['testing'][0];
+        $testing = $this->normalization['dataset']['training'][$norm_i];
+        $c_i = 0;
+        $this->data['metadata']['stepbystep']['euclid'][0] = '\(d=\sqrt{\left(C_x^1-C_y^1\right)^2+\left(C_x^2-C_y^2\right)^2+\cdots+\left(C_x^n-C_y^n\right)^2}\)';
+        $this->data['metadata']['stepbystep']['euclid'][1] = '\(d_{' . ($norm_i + 1) . '}=\sqrt{';
+        $this->data['metadata']['stepbystep']['euclid'][2] = '\(d_{' . ($norm_i + 1) . '}=\sqrt{';
+        $this->data['metadata']['stepbystep']['euclid'][3] = '\(d_{' . ($norm_i + 1) . '}=\sqrt{';
+        $i = 0;
+        foreach ($this->category['key'] as $category)
+        {
+            ++$i;
+            if ($category != 'tingkat_resiko')
+            {
+                if ($i !== 1)
+                {
+                    $this->data['metadata']['stepbystep']['euclid'][1] .= '+';
+                    $this->data['metadata']['stepbystep']['euclid'][2] .= '+';
+                }
+                $this->data['metadata']['stepbystep']['euclid'][1] .= '\left(C_{d.lt\left(' . ($norm_i + 1) . '\right)}^{' . ++$c_i . '}-C_{d.tt\left(' . '1' . '\right)}^{' . $c_i . '}\right)^2';
+                $this->data['metadata']['stepbystep']['euclid'][2] .= '\left('.sprintf("%.4f", $training[$category]).'-'.sprintf("%.4f", $testing[$category]).'\right)^2';
+            }
+            else
+            {
+                ++$i;
+            }
+        }
+        $this->data['metadata']['stepbystep']['euclid'][1] .= '}\)';
+        $this->data['metadata']['stepbystep']['euclid'][2] .= '}\)';
+        $this->data['metadata']['stepbystep']['euclid'][3] .=  sprintf("%.4f", $this->euclidian['dataset']['training'][$norm_i]['distance']).'}\)';
+    }
+
     private function sortDistanceAscending()
     {
         $this->euclidian['sorted']['dataset']['training'] = $this->euclidian['dataset']['training'];
-        usort($this->euclidian['sorted']['dataset']['training'], function($data1, $data2)
+        usort($this->euclidian['sorted']['dataset']['training'], function ($data1, $data2)
         {
             return ($data1['distance'] > $data2['distance']) ? 1 : -1;
         });
@@ -306,10 +356,10 @@ class M_iknn_debug extends CI_Model
                 $denominator += $denominator_value[$index]['power'];
             }
         }
-        $this->data['metadata']['stepbystep']['kt1'][3] = '\(k_{t1}=sign\left(\frac{'.sprintf("%.20f", $nominator).'}{\sqrt{'.sprintf("%.20f", $denominator).'}}\right)\)';
-        $this->data['metadata']['stepbystep']['kt1'][4] = '\(k_{t1}=sign\left('.sprintf('%.20f', $nominator / (sqrt($denominator))).'\right)\)';
+        $this->data['metadata']['stepbystep']['kt1'][3] = '\(k_{t1}=sign\left(\frac{' . sprintf("%.20f", $nominator) . '}{\sqrt{' . sprintf("%.20f", $denominator) . '}}\right)\)';
+        $this->data['metadata']['stepbystep']['kt1'][4] = '\(k_{t1}=sign\left(' . sprintf('%.20f', $nominator / (sqrt($denominator))) . '\right)\)';
         $this->data['metadata']['kt1'] = $this->signum($nominator / (sqrt($denominator)));
-        $this->data['metadata']['stepbystep']['kt1'][5] = '\(k_{t1}='.$this->data['metadata']['kt1'].'\)';
+        $this->data['metadata']['stepbystep']['kt1'][5] = '\(k_{t1}=' . $this->data['metadata']['kt1'] . '\)';
         unset($denominator_value, $nominator, $denominator);
     }
 
@@ -320,9 +370,9 @@ class M_iknn_debug extends CI_Model
         {
             $total += count($this->coefficientCorrelation['xy']['dataset'][$dataModel]);
         }
-        $this->data['metadata']['stepbystep']['kt1'][0] = '\(k_{t1}=sign\left(\frac{{\displaystyle\sum_{i=1}^{'.$total.'}}\left(\left(a_i-\overline a\right)\;\cdot\dots\cdot\left(j_i-\overline j\right)\right)}{\sqrt{{\displaystyle\sum_{i=1}^{'.$total.'}}\left(\left(a_i-\overline a\right)^2\;\cdot\dots\cdot\left(j_i-\overline j\right)^2\right)}}\right)\)';
-        $this->data['metadata']['stepbystep']['kt1'][1] = '\(k_{t1}=sign\left(\frac{{\displaystyle\sum_{i=1}^{'.$total.'}}\left(\left('.$this->normalization['dataset']['training'][0]['tekanan_darah'].'-'.$this->data['metadata']['mean']['normalization']['tekanan_darah'].'\right)\;\cdot\dots\cdot\left('.$this->normalization['dataset']['training'][0]['tingkat_resiko'].'-'.$this->data['metadata']['mean']['normalization']['tingkat_resiko'].'\right)\right)}{\sqrt{{\displaystyle\sum_{i=1}^{'.$total.'}}\left(\left('.$this->normalization['dataset']['training'][0]['tekanan_darah'].'-'.$this->data['metadata']['mean']['normalization']['tekanan_darah'].'\right)^2\;\cdot\dots\cdot\left('.$this->normalization['dataset']['training'][0]['tingkat_resiko'].'-'.$this->data['metadata']['mean']['normalization']['tingkat_resiko'].'\right)^2\right)}}\right)\)';
-        $this->data['metadata']['stepbystep']['kt1'][2] = '\(k_{t1}=sign\left(\frac{'.sprintf("%.20f",$this->coefficientCorrelation['xy']['dataset']['training'][0]['power']).'\;+\;\cdots\;+\;'.sprintf("%.20f",$this->coefficientCorrelation['xy']['dataset']['training'][0]['power']).'}{\sqrt{'.sprintf("%.20f",$this->coefficientCorrelation['xy2']['dataset']['training'][0]['power']).'\;+\;\cdots\;+\;'.sprintf("%.20f",$this->coefficientCorrelation['xy2']['dataset']['training'][0]['power']).'}}\right)\)';
+        $this->data['metadata']['stepbystep']['kt1'][0] = '\(k_{t1}=sign\left(\frac{{\displaystyle\sum_{i=1}^{' . $total . '}}\left(\left(a_i-\overline a\right)\;\cdot\dots\cdot\left(j_i-\overline j\right)\right)}{\sqrt{{\displaystyle\sum_{i=1}^{' . $total . '}}\left(\left(a_i-\overline a\right)^2\;\cdot\dots\cdot\left(j_i-\overline j\right)^2\right)}}\right)\)';
+        $this->data['metadata']['stepbystep']['kt1'][1] = '\(k_{t1}=sign\left(\frac{{\displaystyle\sum_{i=1}^{' . $total . '}}\left(\left(' . $this->normalization['dataset']['training'][0]['tekanan_darah'] . '-' . $this->data['metadata']['mean']['normalization']['tekanan_darah'] . '\right)\;\cdot\dots\cdot\left(' . $this->normalization['dataset']['training'][0]['tingkat_resiko'] . '-' . $this->data['metadata']['mean']['normalization']['tingkat_resiko'] . '\right)\right)}{\sqrt{{\displaystyle\sum_{i=1}^{' . $total . '}}\left(\left(' . $this->normalization['dataset']['training'][0]['tekanan_darah'] . '-' . $this->data['metadata']['mean']['normalization']['tekanan_darah'] . '\right)^2\;\cdot\dots\cdot\left(' . $this->normalization['dataset']['training'][0]['tingkat_resiko'] . '-' . $this->data['metadata']['mean']['normalization']['tingkat_resiko'] . '\right)^2\right)}}\right)\)';
+        $this->data['metadata']['stepbystep']['kt1'][2] = '\(k_{t1}=sign\left(\frac{' . sprintf("%.20f", $this->coefficientCorrelation['xy']['dataset']['training'][0]['power']) . '\;+\;\cdots\;+\;' . sprintf("%.20f", $this->coefficientCorrelation['xy']['dataset']['training'][0]['power']) . '}{\sqrt{' . sprintf("%.20f", $this->coefficientCorrelation['xy2']['dataset']['training'][0]['power']) . '\;+\;\cdots\;+\;' . sprintf("%.20f", $this->coefficientCorrelation['xy2']['dataset']['training'][0]['power']) . '}}\right)\)';
         ksort($this->data['metadata']['stepbystep']['kt1']);
     }
 
@@ -360,10 +410,8 @@ class M_iknn_debug extends CI_Model
 
     private function chooseClass()
     {
-        $this->data['metadata']['voting']['class'] = $this->euclidian['sorted']['dataset']['training'][$this->data['metadata']['voting']['k']-1]['tingkat_resiko'];
+        $this->data['metadata']['voting']['class'] = $this->euclidian['sorted']['dataset']['training'][$this->data['metadata']['voting']['k'] - 1]['tingkat_resiko'];
     }
-
-
 
 
 }
